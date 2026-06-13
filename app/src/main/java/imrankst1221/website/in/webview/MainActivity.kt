@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
         const val PERMISSION_REQUEST_CODE = 123
     }
 
-    // Yahan saari permissions add kar di hain (Location, Mic, Camera, Notifications)
+    // 🔥 FIX: Hardcoded string use ki hai taaki purana compiler error na de
     private val requiredPermissions = mutableListOf(
         Manifest.permission.RECORD_AUDIO,
         Manifest.permission.CAMERA,
@@ -34,8 +34,8 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION
     ).apply {
-        if (Build.VERSION.SDK_INT >= 33) { // Android 13+ ke liye notification
-            add(Manifest.permission.POST_NOTIFICATIONS)
+        if (Build.VERSION.SDK_INT >= 33) {
+            add("android.permission.POST_NOTIFICATIONS") 
         }
     }.toTypedArray()
 
@@ -47,7 +47,6 @@ class MainActivity : AppCompatActivity() {
         webView = WebView(this)
         layout.addView(webView)
         
-        // Tumhari Splash Screen Image
         val splashImage = android.widget.ImageView(this)
         splashImage.setImageResource(R.mipmap.splash)
         splashImage.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
@@ -66,7 +65,6 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, requiredPermissions, PERMISSION_REQUEST_CODE)
         }
 
-        // 2 Second baad image hide karna
         Handler(Looper.getMainLooper()).postDelayed({
             layout.removeView(splashImage)
         }, 2000)
@@ -89,7 +87,7 @@ class MainActivity : AppCompatActivity() {
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
         
-        // 🔥 MAIN FIX: WebView ko Location use karne ki permission dena
+        // Location bypass
         settings.setGeolocationEnabled(true)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -111,14 +109,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webChromeClient = object : WebChromeClient() {
-            // Camera aur Mic ki permissions pass karna
             override fun onPermissionRequest(request: PermissionRequest) {
                 runOnUiThread {
                     request.grant(request.resources)
                 }
             }
             
-            // 🔥 MAIN FIX: Website ko direct location access bypass karwana
             override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
                 callback.invoke(origin, true, false)
             }
@@ -128,8 +124,8 @@ class MainActivity : AppCompatActivity() {
     private fun injectAudioToggleConstants(view: WebView?) {
         val jsSnippet = """
             if (typeof window.AudioToggle !== 'undefined') {
-                window.window.AudioToggle.SPEAKER = $SPEAKER;
-                window.window.AudioToggle.EARPIECE = $EARPIECE;
+                window.AudioToggle.SPEAKER = $SPEAKER;
+                window.AudioToggle.EARPIECE = $EARPIECE;
             }
         """.trimIndent()
         view?.evaluateJavascript(jsSnippet, null)
