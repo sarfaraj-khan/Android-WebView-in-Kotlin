@@ -26,18 +26,15 @@ class MainActivity : AppCompatActivity() {
         const val PERMISSION_REQUEST_CODE = 123
     }
 
-    // 🔥 FIX: Hardcoded string use ki hai taaki purana compiler error na de
-    private val requiredPermissions = mutableListOf(
+    // Ekdum simple array use kiya hai taaki purana compiler error na de
+    private val requiredPermissions = arrayOf(
         Manifest.permission.RECORD_AUDIO,
         Manifest.permission.CAMERA,
         Manifest.permission.MODIFY_AUDIO_SETTINGS,
         Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION
-    ).apply {
-        if (Build.VERSION.SDK_INT >= 33) {
-            add("android.permission.POST_NOTIFICATIONS") 
-        }
-    }.toTypedArray()
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        "android.permission.POST_NOTIFICATIONS"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,7 +84,6 @@ class MainActivity : AppCompatActivity() {
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
         
-        // Location bypass
         settings.setGeolocationEnabled(true)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
