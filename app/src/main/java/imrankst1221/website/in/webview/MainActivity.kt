@@ -1,6 +1,5 @@
 package imrankst1221.website.`in`.webview
 
-package com.example.securetalk
 
 import android.Manifest
 import android.content.Context
