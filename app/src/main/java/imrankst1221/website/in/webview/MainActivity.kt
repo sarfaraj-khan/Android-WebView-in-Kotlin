@@ -26,19 +26,36 @@ class MainActivity : AppCompatActivity() {
         const val PERMISSION_REQUEST_CODE = 123
     }
 
-    private val requiredPermissions = arrayOf(
+    // Yahan saari permissions add kar di hain (Location, Mic, Camera, Notifications)
+    private val requiredPermissions = mutableListOf(
         Manifest.permission.RECORD_AUDIO,
         Manifest.permission.CAMERA,
-        Manifest.permission.MODIFY_AUDIO_SETTINGS
-    )
+        Manifest.permission.MODIFY_AUDIO_SETTINGS,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ).apply {
+        if (Build.VERSION.SDK_INT >= 33) { // Android 13+ ke liye notification
+            add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }.toTypedArray()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        val layout = android.widget.FrameLayout(this)
+        
         webView = WebView(this)
-        setContentView(webView)
+        layout.addView(webView)
+        
+        // Tumhari Splash Screen Image
+        val splashImage = android.widget.ImageView(this)
+        splashImage.setImageResource(R.mipmap.splash)
+        splashImage.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+        splashImage.setBackgroundColor(android.graphics.Color.parseColor("#000000"))
+        
+        layout.addView(splashImage)
+        setContentView(layout)
 
-        // Screen on rakhne ke liye taaki call kate nahi
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         configureWebView()
@@ -48,23 +65,16 @@ class MainActivity : AppCompatActivity() {
         } else {
             ActivityCompat.requestPermissions(this, requiredPermissions, PERMISSION_REQUEST_CODE)
         }
+
+        // 2 Second baad image hide karna
+        Handler(Looper.getMainLooper()).postDelayed({
+            layout.removeView(splashImage)
+        }, 2000)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_CODE) {
-            var allGranted = true
-            for (result in grantResults) {
-                if (result != PackageManager.PERMISSION_GRANTED) {
-                    allGranted = false
-                    break
-                }
-            }
-            if (allGranted) {
-                Toast.makeText(this, "Permissions Granted!", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "Mic and Camera access required for calls.", Toast.LENGTH_LONG).show()
-            }
             loadChatWebsite()
         }
     }
@@ -79,6 +89,9 @@ class MainActivity : AppCompatActivity() {
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
         
+        // 🔥 MAIN FIX: WebView ko Location use karne ki permission dena
+        settings.setGeolocationEnabled(true)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
@@ -98,10 +111,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webChromeClient = object : WebChromeClient() {
+            // Camera aur Mic ki permissions pass karna
             override fun onPermissionRequest(request: PermissionRequest) {
                 runOnUiThread {
                     request.grant(request.resources)
                 }
+            }
+            
+            // 🔥 MAIN FIX: Website ko direct location access bypass karwana
+            override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
+                callback.invoke(origin, true, false)
             }
         }
     }
@@ -109,8 +128,8 @@ class MainActivity : AppCompatActivity() {
     private fun injectAudioToggleConstants(view: WebView?) {
         val jsSnippet = """
             if (typeof window.AudioToggle !== 'undefined') {
-                window.AudioToggle.SPEAKER = $SPEAKER;
-                window.AudioToggle.EARPIECE = $EARPIECE;
+                window.window.AudioToggle.SPEAKER = $SPEAKER;
+                window.window.AudioToggle.EARPIECE = $EARPIECE;
             }
         """.trimIndent()
         view?.evaluateJavascript(jsSnippet, null)
